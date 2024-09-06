@@ -4,8 +4,8 @@ from django.http import JsonResponse, HttpResponse
 from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
-from .serializers import RegisterCustomUserSerializer, LoginCustomUserSerializer
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from .serializers import RegisterCustomUserSerializer, LoginCustomUserSerializer, AddAboutCustomUserSerializer
 from rest_framework.authtoken.models import Token
 
 # Create your views here.
@@ -29,7 +29,7 @@ class RegisterView(APIView):
 class LoginView(APIView):
     permission_classes = [AllowAny]
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request):
         serializer = LoginCustomUserSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.validated_data['user']
@@ -38,4 +38,16 @@ class LoginView(APIView):
                 'user': serializer.data,
                 'token': token.key,
             })
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class UpdateUserView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request):
+        user = request.user
+        serializer = AddAboutCustomUserSerializer(user, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({'update': 'succes'})
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

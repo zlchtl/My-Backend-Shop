@@ -4,7 +4,7 @@ from rest_framework.test import APITestCase
 from django.urls import reverse
 from .models import CustomUser
 from rest_framework.authtoken.models import Token
-from .serializers import RegisterCustomUserSerializer, LoginCustomUserSerializer
+from .serializers import RegisterCustomUserSerializer, LoginCustomUserSerializer, AddAboutCustomUserSerializer
 
 class RegisterViewTests(APITestCase):
 
@@ -183,3 +183,101 @@ class LoginCustomUserSerializerTests(TestCase):
         serializer = LoginCustomUserSerializer(data=data)
         self.assertFalse(serializer.is_valid())
         self.assertIn('non_field_errors', serializer.errors)
+
+
+class AddAboutCustomUserSerializerTests(TestCase):
+
+    def setUp(self):
+        self.user = CustomUser.objects.create_user(
+            username='user',
+            password='password',
+            email='user@example.com'
+        )
+
+    def test_valid_data(self):
+        data = {
+            'first_name': 'Имя',
+            'last_name': 'Фамилия'
+        }
+        serializer = AddAboutCustomUserSerializer(instance=self.user, data=data)
+        self.assertTrue(serializer.is_valid())
+        serializer.save()
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.first_name, 'Имя')
+        self.assertEqual(self.user.last_name, 'Фамилия')
+
+    def test_invalid_first_name_special_characters(self):
+        data = {
+            'first_name': 'Имя!',
+            'last_name': 'Фамилия'
+        }
+        serializer = AddAboutCustomUserSerializer(instance=self.user, data=data)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('first_name', serializer.errors)
+
+    def test_invalid_last_name_special_characters(self):
+        data = {
+            'first_name': 'Имя',
+            'last_name': 'Фамилия@'
+        }
+        serializer = AddAboutCustomUserSerializer(instance=self.user, data=data)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('last_name', serializer.errors)
+
+    def test_blank_first_name(self):
+        data = {
+            'first_name': '',
+            'last_name': 'Фамилия'
+        }
+        serializer = AddAboutCustomUserSerializer(instance=self.user, data=data)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('first_name', serializer.errors)
+
+    def test_blank_last_name(self):
+        data = {
+            'first_name': 'Имя',
+            'last_name': ''
+        }
+        serializer = AddAboutCustomUserSerializer(instance=self.user, data=data)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('last_name', serializer.errors)
+
+class UpdateUserViewTests(APITestCase):
+    def setUp(self):
+        self.url = reverse('api-update')
+        self.user = CustomUser.objects.create_user(
+            username='user',
+            password='password',
+            email='user@example.com'
+        )
+        self.token = Token.objects.create(user=self.user)
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token.key)
+
+    def test_update_user_success(self):
+        data = {
+            'first_name': 'НовоеИмя',
+            'last_name': 'НоваяФамилия'
+        }
+        response = self.client.put(self.url, data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.first_name, 'НовоеИмя')
+        self.assertEqual(self.user.last_name, 'НоваяФамилия')
+
+    def test_update_user_invalid_data(self):
+        data = {
+            'first_name': 'Имя!',
+            'last_name': 'Фамилия'
+        }
+        response = self.client.put(self.url, data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_update_user_unauthenticated(self):
+        self.client.credentials()
+        self.client.logout()
+        data = {
+            'first_name': 'Имя',
+            'last_name': 'Фамилия'
+        }
+        response = self.client.put(self.url, data)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)

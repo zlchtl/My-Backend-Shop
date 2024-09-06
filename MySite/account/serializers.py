@@ -67,3 +67,21 @@ class LoginCustomUserSerializer(serializers.Serializer):
         attrs['user'] = user
         return attrs
 
+class AddAboutCustomUserSerializer(serializers.ModelSerializer):
+    first_name = serializers.CharField(required=True, allow_blank=False)
+    last_name = serializers.CharField(required=True, allow_blank=False)
+
+    class Meta:
+        model = CustomUser
+        fields = ['first_name', 'last_name']
+
+    def validate_name(self, value):
+        if not re.match(r'^[a-zA-Zа-яА-ЯёЁ]+$', value):
+            raise serializers.ValidationError("Нельзя использовать специальные символы")
+        return value
+
+    def validate_first_name(self, value):
+        return self.validate_name(value)
+
+    def validate_last_name(self, value):
+        return self.validate_name(value)

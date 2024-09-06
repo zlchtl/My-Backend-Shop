@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import CustomUser
+from django.contrib.auth import authenticate
 import re
 
 
@@ -44,3 +45,25 @@ class RegisterCustomUserSerializer(serializers.ModelSerializer):
         user.set_password(validated_data['password1'])
         user.save()
         return user
+
+class LoginCustomUserSerializer(serializers.Serializer):
+    username = serializers.CharField(required=True, allow_blank=False)
+    password = serializers.CharField(write_only=True, required=True, allow_blank=False)
+
+    def validate_password(self, value):
+        if len(value)<8:
+            raise serializers.ValidationError("Пароль слишком короткий")
+        return value
+
+    def validate_username(self, value):
+        if not re.match(r'^[a-zA-Zа-яА-ЯёЁ0-9]+$', value):
+            raise serializers.ValidationError("Нельзя использовать специальные символы")
+        return value
+
+    def validate(self, attrs):
+        user = authenticate(username=attrs['username'], password=attrs['password'])
+        if user is None:
+            raise serializers.ValidationError("Неверный логин или пароль.")
+        attrs['user'] = user
+        return attrs
+

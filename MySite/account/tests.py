@@ -4,7 +4,7 @@ from rest_framework.test import APITestCase
 from django.urls import reverse
 from .models import CustomUser
 from rest_framework.authtoken.models import Token
-from .serializers import RegisterCustomUserSerializer
+from .serializers import RegisterCustomUserSerializer, LoginCustomUserSerializer
 
 class RegisterViewTests(APITestCase):
 
@@ -127,3 +127,59 @@ class RegisterCustomUserSerializerTests(TestCase):
         self.assertEqual(user.username, data['username'])
         self.assertEqual(user.email, data['email'])
         self.assertTrue(user.check_password(data['password1']))
+
+
+class LoginCustomUserSerializerTests(TestCase):
+
+    def setUp(self):
+        self.user = CustomUser.objects.create_user(
+            username='validuser',
+            password='strongpassword',
+            email='user@example.com'
+        )
+
+    def test_valid_data(self):
+        data = {
+            'username': 'validuser',
+            'password': 'strongpassword'
+        }
+        serializer = LoginCustomUserSerializer(data=data)
+        self.assertTrue(serializer.is_valid())
+        self.assertEqual(serializer.validated_data['user'], self.user)
+
+    def test_invalid_username(self):
+        data = {
+            'username': 'invalid@user!',
+            'password': 'strongpassword'
+        }
+        serializer = LoginCustomUserSerializer(data=data)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('username', serializer.errors)
+
+    def test_short_password(self):
+        data = {
+            'username': 'validuser',
+            'password': 'short'
+        }
+        serializer = LoginCustomUserSerializer(data=data)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('password', serializer.errors)
+        self.assertEqual(serializer.errors['password'], ["Пароль слишком короткий"])
+
+    def test_wrong_username(self):
+        data = {
+            'username': 'wronguser',
+            'password': 'strongpassword'
+        }
+        serializer = LoginCustomUserSerializer(data=data)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('non_field_errors', serializer.errors)
+
+    def test_wrong_password(self):
+        data = {
+            'username': 'validuser',
+            'password': 'wrongpassword'
+        }
+        serializer = LoginCustomUserSerializer(data=data)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('non_field_errors', serializer.errors)

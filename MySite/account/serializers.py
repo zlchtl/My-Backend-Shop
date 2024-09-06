@@ -3,7 +3,7 @@ from .models import CustomUser
 import re
 
 
-class CustomUserSerializer(serializers.ModelSerializer):
+class RegisterCustomUserSerializer(serializers.ModelSerializer):
     password1 = serializers.CharField(write_only=True)
     password2 = serializers.CharField(write_only=True)
     email = serializers.EmailField()

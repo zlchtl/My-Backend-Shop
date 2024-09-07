@@ -7,8 +7,8 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .serializers import RegisterCustomUserSerializer, LoginCustomUserSerializer, AddAboutCustomUserSerializer
-from rest_framework.authtoken.models import Token
-from .services import RecreateTokenService
+from .services import RecreateTokenService, SendAsyncEmailService
+
 
 # Create your views here.
 
@@ -67,3 +67,11 @@ class RecreateTokenView(APIView):
             }, status=status.HTTP_201_CREATED)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+class ConfirmEmail(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        SendAsyncEmailService.delay(request.user.email)
+        return Response({'test':'test'},status=status.HTTP_200_OK)
+    def post(self, request, key):
+        pass

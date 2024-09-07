@@ -51,3 +51,19 @@ class UpdateUserView(APIView):
             serializer.save()
             return Response({'update': 'succes'})
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class RecreateTokenView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            user = request.user
+            token = Token.objects.get(user=user)
+            token.delete()
+            token = Token.objects.create(user=user)
+            return Response({
+                'user': user.username,
+                'token': token.key
+            }, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)

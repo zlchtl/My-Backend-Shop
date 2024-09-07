@@ -281,3 +281,29 @@ class UpdateUserViewTests(APITestCase):
         }
         response = self.client.put(self.url, data)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+class RecreateTokenViewTests(APITestCase):
+    def setUp(self):
+        self.user = CustomUser.objects.create_user(username='testuser', password='testpass')
+        self.token = Token.objects.create(user=self.user)
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token.key)
+        self.url = reverse('api-recreate-token')
+
+    def test_recreate_token_success(self):
+        self.client.force_login(self.user)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertNotEqual(response.data['token'], self.token.key)
+
+    def test_recreate_token_unauthenticated(self):
+        self.client.credentials()
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_recreate_token_no_token(self):
+        self.token.delete()
+        self.client.force_login(self.user)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertIsNone(response.data.get('token'))
+

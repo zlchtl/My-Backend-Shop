@@ -9,7 +9,8 @@ import uuid
 @shared_task
 def SendAsyncEmailService(username, recipient):
     key = str(uuid.uuid4())
-    message = f'test\n{reverse('api-confirm-email')}?key={key}'
+    message = (f'MySite \nДля подтверждения почты перейдите по ссылке\n'
+               f'http://127.0.0.1:8000{reverse('api-confirm-email')}?key={key}')   #TODO заменить на что-то нормальное
     your_mail = settings.EMAIL_HOST_USER
 
     RedisKeyManager().save_key(user_id=username, key='email', value=key)

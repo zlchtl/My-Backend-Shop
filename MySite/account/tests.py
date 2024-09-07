@@ -3,8 +3,9 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 from django.urls import reverse
 from .models import CustomUser
-from rest_framework.authtoken.models import Token
 from .serializers import RegisterCustomUserSerializer, LoginCustomUserSerializer, AddAboutCustomUserSerializer
+from .services import RecreateTokenService, DeleteTokenService
+
 
 class RegisterViewTests(APITestCase):
 
@@ -250,8 +251,8 @@ class UpdateUserViewTests(APITestCase):
             password='password',
             email='user@example.com'
         )
-        self.token = Token.objects.create(user=self.user)
-        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token.key)
+        _, self.token = RecreateTokenService(self.user)
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token)
 
     def test_update_user_success(self):
         data = {
@@ -285,15 +286,15 @@ class UpdateUserViewTests(APITestCase):
 class RecreateTokenViewTests(APITestCase):
     def setUp(self):
         self.user = CustomUser.objects.create_user(username='testuser', password='testpass')
-        self.token = Token.objects.create(user=self.user)
-        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token.key)
+        _, self.token = RecreateTokenService(self.user)
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token)
         self.url = reverse('api-recreate-token')
 
     def test_recreate_token_success(self):
         self.client.force_login(self.user)
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertNotEqual(response.data['token'], self.token.key)
+        self.assertNotEqual(response.data['token'], self.token)
 
     def test_recreate_token_unauthenticated(self):
         self.client.credentials()
@@ -301,7 +302,7 @@ class RecreateTokenViewTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_recreate_token_no_token(self):
-        self.token.delete()
+        DeleteTokenService(self.user)
         self.client.force_login(self.user)
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)

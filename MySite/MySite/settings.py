@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 from decouple import config
+from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -40,7 +41,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'account',
     'rest_framework',
-    'rest_framework.authtoken'
+    'rest_framework.authtoken',
+    'knox'
 ]
 
 MIDDLEWARE = [
@@ -105,8 +107,12 @@ AUTH_PASSWORD_VALIDATORS = [
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.TokenAuthentication',
+        'knox.auth.TokenAuthentication',
     ],
+}
+
+KNOX = {
+    'TOKEN_TTL': timedelta(days=1),
 }
 
 # Internationalization

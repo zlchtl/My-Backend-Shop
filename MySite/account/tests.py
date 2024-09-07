@@ -1,9 +1,12 @@
+from unittest.mock import Mock, patch
+
 from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APITestCase
 from django.urls import reverse
-from .models import CustomUser
-from .serializers import RegisterCustomUserSerializer, LoginCustomUserSerializer, AddAboutCustomUserSerializer
+from .models import CustomUser, RedisKeyManager
+from .serializers import RegisterCustomUserSerializer, LoginCustomUserSerializer, AddAboutCustomUserSerializer, \
+    ConfirmEmailSerializer
 from .services import RecreateTokenService, DeleteTokenService
 
 
@@ -308,3 +311,62 @@ class RecreateTokenViewTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertIsNone(response.data.get('token'))
 
+class ConfirmEmailSerializerTests(TestCase):
+    def setUp(self):
+        self.valid_data = {'key': 'valid_key'}
+        self.user = CustomUser.objects.create_user(username='testuser', password='testpass')
+        RedisKeyManager().save_key(user_id=self.user.username, key='email', value='valid_key')
+        self.mock_request = Mock()
+        self.mock_request.user.username = 'testuser'
+
+    def test_valid_data(self):
+        serializer = ConfirmEmailSerializer(data=self.valid_data,  context={'request': self.mock_request})
+        self.assertTrue(serializer.is_valid())
+
+    def test_invalid_key(self):
+        invalid_data = {'key': 'invalid_key'}
+        serializer = ConfirmEmailSerializer(data=invalid_data,  context={'request': self.mock_request})
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('key', serializer.errors)
+
+    def test_missing_key(self):
+        serializer = ConfirmEmailSerializer(data={}, context={'request': self.mock_request})
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('key', serializer.errors)
+
+class ConfirmEmailTests(APITestCase):
+
+    def setUp(self):
+        self.username = 'testuser'
+        self.user = CustomUser.objects.create_user(username=self.username, password='testpassword')
+        _, self.token = RecreateTokenService(self.user)
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token)
+        self.url = reverse('api-confirm-email')
+        self.redis_manager = RedisKeyManager()
+
+    @patch('account.services.SendAsyncEmailService.delay')
+    def test_get_request_sends_email(self, mock_send_email):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        mock_send_email.assert_called_once_with(self.username, self.user.email)
+
+    def test_post_request_with_valid_key(self):
+        key = 'valid_key'
+        self.redis_manager.save_key(user_id=self.username, key='email', value=key)
+
+        response = self.client.post(self.url+f'?key={key}')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {'email': 'confirmed'})
+
+        user = CustomUser.objects.get(username=self.username)
+        self.assertTrue(user.is_email_verified)
+        self.assertIsNone(self.redis_manager.get_key(user_id=self.username, key='email'))
+
+    def test_post_request_with_invalid_key(self):
+        response = self.client.post(self.url+f'?key={'invalid_key'}')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, {'key': ['Key is not valid.']})
+
+    def test_post_request_without_key(self):
+        response = self.client.post(self.url, {})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

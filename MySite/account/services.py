@@ -1,12 +1,19 @@
 from knox.models import AuthToken
+from .models import RedisKeyManager
 from celery import shared_task
+from django.urls import reverse
 from django.core.mail import send_mail
 from django.conf import settings
+import uuid
 
 @shared_task
-def SendAsyncEmailService(recipient):
-    message = 'test'
+def SendAsyncEmailService(username, recipient):
+    key = str(uuid.uuid4())
+    message = f'test\n{reverse('api-confirm-email')}?key={key}'
     your_mail = settings.EMAIL_HOST_USER
+
+    RedisKeyManager().save_key(user_id=username, key='email', value=key)
+
     try:
         send_mail('MySite подтверждение почты', message,
                   your_mail, [recipient])

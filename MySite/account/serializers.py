@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import CustomUser
+from .models import CustomUser, RedisKeyManager
 from django.contrib.auth import authenticate
 import re
 
@@ -85,3 +85,25 @@ class AddAboutCustomUserSerializer(serializers.ModelSerializer):
 
     def validate_last_name(self, value):
         return self.validate_name(value)
+
+
+class ConfirmEmailSerializer(serializers.Serializer):
+    key = serializers.CharField(required=True)
+
+    def validate_key(self, value):
+        user_id = self.context['request'].user.username
+        rkey = RedisKeyManager().get_key(user_id=user_id, key='email')
+        if value != rkey:
+            raise serializers.ValidationError("Key is not valid.")
+        return value
+
+    def save(self):
+        user_id = self.context['request'].user.username
+        user = CustomUser.objects.filter(username=user_id).first()
+        if not user:
+            raise serializers.ValidationError("User not found.")
+        user.is_email_verified = True
+        user.save()
+
+        RedisKeyManager().delete_key(user_id=user_id, key='email')
+        return user

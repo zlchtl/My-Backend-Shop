@@ -6,7 +6,8 @@ from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from .serializers import RegisterCustomUserSerializer, LoginCustomUserSerializer, AddAboutCustomUserSerializer
+from .serializers import RegisterCustomUserSerializer, LoginCustomUserSerializer, AddAboutCustomUserSerializer, \
+    ConfirmEmailSerializer
 from .services import RecreateTokenService, SendAsyncEmailService
 
 
@@ -70,8 +71,15 @@ class RecreateTokenView(APIView):
 
 class ConfirmEmail(APIView):
     permission_classes = [IsAuthenticated]
+
     def get(self, request):
-        SendAsyncEmailService.delay(request.user.email)
+        SendAsyncEmailService.delay(request.user.username, request.user.email)
         return Response({'test':'test'},status=status.HTTP_200_OK)
-    def post(self, request, key):
-        pass
+
+    def post(self, request):
+        key = request.GET.get('key')
+        serializer = ConfirmEmailSerializer(data={'key': key}, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response({'email': 'confirmed'}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

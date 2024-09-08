@@ -7,7 +7,9 @@ from django.urls import reverse
 
 from knox.models import AuthToken
 from .models import RedisKeyManager
+import logging
 
+logger = logging.getLogger('django')
 
 @shared_task
 def send_async_email_service(username, recipient):
@@ -25,7 +27,7 @@ def send_async_email_service(username, recipient):
     try:
         send_mail('MySite подтверждение почты', message, your_mail, [recipient])
     except Exception as error:
-        print(f"Error sending email: {str(error)}")
+        logger.warning(f'Sending email error: {str(error)}')
 
 
 def recreate_token_service(user):

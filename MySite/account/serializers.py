@@ -127,3 +127,34 @@ class ConfirmEmailSerializer(serializers.Serializer):
 
         RedisKeyManager().delete_key(user_id=user_id, key='email')
         return user
+
+class ChangingPasswordSerializer(serializers.ModelSerializer):
+    """Password serializer with saving to user"""
+    password1 = serializers.CharField(write_only=True)
+    password2 = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = CustomUser
+        fields = ['password1', 'password2']
+
+    def validate_password1(self, value):
+        """Validate that the password is at least 8 characters long."""
+        if len(value) < 8:
+            raise serializers.ValidationError("Пароль слишком короткий")
+        return value
+
+    def validate(self, attrs):
+        """Ensure that both passwords match."""
+        if attrs.get('password1') != attrs.get('password2'):
+            raise serializers.ValidationError({"password2": "Пароли не совпадают."})
+        return attrs
+
+    def save(self):
+        """Saving user with new password."""
+        user_id = self.context['request'].user.username
+        user = CustomUser.objects.filter(username=user_id).first()
+        if not user:
+            raise serializers.ValidationError("User not found.")
+        password1 = self.validated_data['password1']
+        user.set_password(password1)
+        user.save()

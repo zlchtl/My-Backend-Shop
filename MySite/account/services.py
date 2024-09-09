@@ -39,3 +39,17 @@ def recreate_token_service(user):
 def delete_token_service(user):
     """Delete the authentication token for the given user."""
     AuthToken.objects.filter(user=user).delete()
+
+
+def user_information_service(user):
+    """Return all user information"""
+    data = {
+        'username': user.username,
+        'email': user.email,
+        'birth_date': user.birth_date,
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+        'is_email_verified': user.is_email_verified,
+        'is_superuser': user.is_superuser,
+    }
+    return data

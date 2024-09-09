@@ -8,9 +8,10 @@ from .serializers import (
     RegisterCustomUserSerializer,
     LoginCustomUserSerializer,
     AddAboutCustomUserSerializer,
-    ConfirmEmailSerializer
+    ConfirmEmailSerializer, ChangingPasswordSerializer
 )
-from .services import recreate_token_service, send_async_email_service
+from .services import recreate_token_service, send_async_email_service, user_information_service
+
 
 #---------------API----------------
 class RegisterView(APIView):
@@ -48,7 +49,7 @@ class LoginView(APIView):
 class UpdateUserView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def put(self, request):
+    def patch(self, request):
         """Update the authenticated user's information."""
         user = request.user
         serializer = AddAboutCustomUserSerializer(user, data=request.data)
@@ -69,13 +70,13 @@ class RecreateTokenView(APIView):
             'token': token
         }, status=status.HTTP_201_CREATED)
 
-class ConfirmEmail(APIView):
+class ConfirmEmailView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         """Send a confirmation email to the authenticated user."""
         send_async_email_service.delay(request.user.username, request.user.email)
-        return Response({'test': 'test'}, status=status.HTTP_200_OK)
+        return Response({'state': 'sent'}, status=status.HTTP_200_OK)
 
     def post(self, request):
         """Confirm the user's email using the provided key."""
@@ -85,3 +86,20 @@ class ConfirmEmail(APIView):
             serializer.save()
             return Response({'email': 'confirmed'}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class ProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        """Return all user information"""
+        data = user_information_service(request.user)
+        return Response(data, status=status.HTTP_200_OK)
+
+class ChangingPasswordView(APIView):
+    permission_classes = [IsAuthenticated]
+    def patch(self, request):
+        """Changing user password"""
+        serializer = ChangingPasswordSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            _, token = recreate_token_service(request.user)
+            return Response({'state': 'sent', 'new_token': token})

@@ -46,10 +46,10 @@ def user_information_service(user):
     data = {
         'username': user.username,
         'email': user.email,
-        'birth_date': user.birth_date,
         'first_name': user.first_name,
         'last_name': user.last_name,
         'is_email_verified': user.is_email_verified,
         'is_superuser': user.is_superuser,
+        'created_at': user.created_at,
     }
     return data

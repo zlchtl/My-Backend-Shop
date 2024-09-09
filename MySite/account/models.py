@@ -11,7 +11,7 @@ class CustomUser(AbstractUser):
     """Custom user model with additional fields."""
 
     is_email_verified = models.BooleanField(default=False)
-    birth_date = models.DateField(default=date.today)
+    created_at = models.DateField(default=date.today)
 
     class Meta:
         verbose_name = 'User'

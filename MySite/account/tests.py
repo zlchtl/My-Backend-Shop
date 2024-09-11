@@ -294,7 +294,7 @@ class UpdateUserViewTests(APITestCase):
             'first_name': 'НовоеИмя',
             'last_name': 'НоваяФамилия',
         }
-        response = self.client.put(self.url, data)
+        response = self.client.patch(self.url, data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.user.refresh_from_db()
         self.assertEqual(self.user.first_name, 'НовоеИмя')
@@ -306,7 +306,7 @@ class UpdateUserViewTests(APITestCase):
             'first_name': 'Имя!',
             'last_name': 'Фамилия',
         }
-        response = self.client.put(self.url, data)
+        response = self.client.patch(self.url, data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_update_user_unauthenticated(self):

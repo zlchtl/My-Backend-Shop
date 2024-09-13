@@ -3,6 +3,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.pagination import PageNumberPagination
 
 from .models import Product, Comment, Cart
 from .serializers import ProductSerializer, CommentSerializer, CartSerializer, FindProductToCartSerializer
@@ -16,9 +17,11 @@ class ProductListCreateView(APIView):
 
     def get(self, request):
         """Retrieve a list of all products."""
+        paginator = PageNumberPagination()
         products = Product.objects.all()
-        serializer = ProductSerializer(products, many=True)
-        return Response(serializer.data)
+        paginated_products = paginator.paginate_queryset(products, request)
+        serializer = ProductSerializer(paginated_products, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
     def post(self, request):
         """Create a new product."""

@@ -12,23 +12,31 @@ def update_product_rating(product):
     total_rating = sum(comment.rating for comment in comments)
     product.rating = total_rating / count
 
+
 def get_cart(request):
-    cart, created = Cart.objects.get_or_create(user=request.user)
+    """Retrieve the user's cart, creating it if it does not exist."""
+    cart, _ = Cart.objects.get_or_create(user=request.user)
     return CartSerializer(cart).data
 
+
 def add_to_cart(request, serializer):
-    cart, created = Cart.objects.get_or_create(user=request.user)
+    """Add a product to the user's cart."""
+    cart, _ = Cart.objects.get_or_create(user=request.user)
     product_slug = serializer.validated_data['product_slug']
     product = Product.objects.get(slug=product_slug)
     cart.products.add(product)
     return CartSerializer(cart).data
 
+
 def remove_from_cart(request, serializer):
+    """Remove a product from the user's cart, if it exists."""
     product_slug = serializer.validated_data['product_slug']
     product = Product.objects.get(slug=product_slug)
-    cart, created = Cart.objects.get_or_create(user=request.user)
+    cart, _ = Cart.objects.get_or_create(user=request.user)
+
     if cart.products.filter(id=product.id).exists():
         cart.products.remove(product)
+
     return CartSerializer(cart).data
 
 

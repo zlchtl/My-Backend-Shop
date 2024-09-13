@@ -93,13 +93,17 @@ class ProductCommentsView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class CartView(APIView):
+    """API view for managing user cart."""
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        """Retrieve the user's cart data."""
         data = get_cart(request)
         return Response(data)
 
     def post(self, request):
+        """Add a product to the user's cart."""
         serializer = FindProductToCartSerializer(data=request.data)
         if serializer.is_valid():
             data = add_to_cart(request, serializer)
@@ -107,6 +111,7 @@ class CartView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request):
+        """Remove a product from the user's cart."""
         serializer = FindProductToCartSerializer(data=request.data)
         if serializer.is_valid():
             data = remove_from_cart(request, serializer)

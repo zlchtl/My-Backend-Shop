@@ -87,7 +87,10 @@ class CommentSerializer(serializers.ModelSerializer):
         validated_data['product'] = self.context['product']
         return super().create(validated_data)
 
+
 class CartSerializer(serializers.ModelSerializer):
+    """Serializer for the Cart model, including product details."""
+
     products = serializers.SerializerMethodField()
 
     class Meta:
@@ -95,12 +98,17 @@ class CartSerializer(serializers.ModelSerializer):
         fields = ['products']
 
     def get_products(self, obj):
+        """Retrieve the names of products in the cart."""
         return [product.name for product in obj.products.all()]
 
+
 class FindProductToCartSerializer(serializers.Serializer):
+    """Serializer for validating product slugs when adding to the cart."""
+
     product_slug = serializers.SlugField()
 
     def validate_product_slug(self, value):
+        """Validate that the product exists based on its slug."""
         if not Product.objects.filter(slug=value).exists():
             raise serializers.ValidationError("Product with this slug does not exist.")
         return value

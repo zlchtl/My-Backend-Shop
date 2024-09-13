@@ -96,37 +96,49 @@ class ProductAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Comment.objects.count(), 1)
 
+
 class CartAPITests(APITestCase):
 
     def setUp(self):
+        """Set up the test user, products, and authentication."""
         self.user = CustomUser.objects.create_user(username='testuser', password='testpass')
-        self.client.login(username='testuser', password='testpass')
         self.token = AuthToken.objects.create(user=self.user)[1]
 
-        self.product1 = Product.objects.create(name='Product 1', price=10.00, description='Description 1', author=self.user)
+        self.product1 = Product.objects.create(
+            name='Product 1',
+            price=10.00,
+            description='Description 1',
+            author=self.user
+        )
         self.product1.slug = 'product-1'
         self.product1.save()
 
-        self.product2 = Product.objects.create(name='Product 2', price=20.00, description='Description 2', author=self.user)
+        self.product2 = Product.objects.create(
+            name='Product 2',
+            price=20.00,
+            description='Description 2',
+            author=self.user
+        )
         self.product2.slug = 'product-2'
         self.product2.save()
 
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token)
 
-
     def test_get_cart(self):
+        """Test retrieving the cart."""
         response = self.client.get(reverse('cart-view'))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['products'], [])
 
-
     def test_add_product_to_cart(self):
+        """Test adding a product to the cart."""
         data = {'product_slug': self.product1.slug}
         response = self.client.post(reverse('cart-view'), data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn(self.product1.name, response.data['products'])
 
     def test_remove_product_from_cart(self):
+        """Test removing a product from the cart."""
         self.client.post(reverse('cart-view'), {'product_slug': self.product1.slug})
 
         data = {'product_slug': self.product1.slug}
@@ -135,6 +147,7 @@ class CartAPITests(APITestCase):
         self.assertNotIn(self.product1.name, response.data['products'])
 
     def test_add_non_existent_product_to_cart(self):
+        """Test adding a non-existent product to the cart."""
         data = {'product_slug': 'non-existent-slug'}
         response = self.client.post(reverse('cart-view'), data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -142,6 +155,7 @@ class CartAPITests(APITestCase):
         self.assertEqual(response.data['product_slug'][0], "Product with this slug does not exist.")
 
     def test_remove_non_existent_product_from_cart(self):
+        """Test removing a non-existent product from the cart."""
         data = {'product_slug': 'non-existent-slug'}
         response = self.client.delete(reverse('cart-view'), data)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)

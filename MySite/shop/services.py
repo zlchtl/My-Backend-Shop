@@ -1,3 +1,6 @@
+from .models import Product, Comment, Cart
+from .serializers import ProductSerializer, CommentSerializer, CartSerializer, FindProductToCartSerializer
+
 def update_product_rating(product):
     """Update the rating of the given product based on its comments."""
 
@@ -8,3 +11,24 @@ def update_product_rating(product):
         return
     total_rating = sum(comment.rating for comment in comments)
     product.rating = total_rating / count
+
+def get_cart(request):
+    cart, created = Cart.objects.get_or_create(user=request.user)
+    return CartSerializer(cart).data
+
+def add_to_cart(request, serializer):
+    cart, created = Cart.objects.get_or_create(user=request.user)
+    product_slug = serializer.validated_data['product_slug']
+    product = Product.objects.get(slug=product_slug)
+    cart.products.add(product)
+    return CartSerializer(cart).data
+
+def remove_from_cart(request, serializer):
+    product_slug = serializer.validated_data['product_slug']
+    product = Product.objects.get(slug=product_slug)
+    cart, created = Cart.objects.get_or_create(user=request.user)
+    if cart.products.filter(id=product.id).exists():
+        cart.products.remove(product)
+    return CartSerializer(cart).data
+
+

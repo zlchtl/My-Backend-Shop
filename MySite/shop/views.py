@@ -4,9 +4,9 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 
-from .models import Product, Comment
-from .serializers import ProductSerializer, CommentSerializer
-from .services import update_product_rating
+from .models import Product, Comment, Cart
+from .serializers import ProductSerializer, CommentSerializer, CartSerializer, FindProductToCartSerializer
+from .services import update_product_rating, get_cart, add_to_cart, remove_from_cart
 
 
 class ProductListCreateView(APIView):
@@ -65,7 +65,7 @@ class ProductDetailView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class ProductComments(APIView):
+class ProductCommentsView(APIView):
     """View for retrieving and creating comments for a product."""
 
     permission_classes = [IsAuthenticated]
@@ -91,3 +91,24 @@ class ProductComments(APIView):
             }
             return Response(data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class CartView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        data = get_cart(request)
+        return Response(data)
+
+    def post(self, request):
+        serializer = FindProductToCartSerializer(data=request.data)
+        if serializer.is_valid():
+            data = add_to_cart(request, serializer)
+            return Response(data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request):
+        serializer = FindProductToCartSerializer(data=request.data)
+        if serializer.is_valid():
+            data = remove_from_cart(request, serializer)
+            return Response(data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_404_NOT_FOUND)

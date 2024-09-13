@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Product, Comment
+from .models import Product, Comment, Cart
 
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -86,3 +86,21 @@ class CommentSerializer(serializers.ModelSerializer):
         validated_data['author'] = self.context['request'].user
         validated_data['product'] = self.context['product']
         return super().create(validated_data)
+
+class CartSerializer(serializers.ModelSerializer):
+    products = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Cart
+        fields = ['products']
+
+    def get_products(self, obj):
+        return [product.name for product in obj.products.all()]
+
+class FindProductToCartSerializer(serializers.Serializer):
+    product_slug = serializers.SlugField()
+
+    def validate_product_slug(self, value):
+        if not Product.objects.filter(slug=value).exists():
+            raise serializers.ValidationError("Product with this slug does not exist.")
+        return value

@@ -47,7 +47,8 @@ class ProductAPITests(APITestCase):
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Product.objects.count(), 2)
-        self.assertEqual(Product.objects.get(id=2).name, 'New Product')
+        new_product = Product.objects.last()
+        self.assertEqual(new_product.name, 'New Product')
 
     def test_get_product_detail(self):
         """Test retrieval of a product by slug."""
